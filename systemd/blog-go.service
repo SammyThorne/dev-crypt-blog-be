@@ -1,0 +1,18 @@
+[Unit]
+Description=Blog Go Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=sammy
+Group=sammy
+WorkingDirectory=/home/sammy/blog/backend
+ExecStart=/home/sammy/blog/backend/server
+EnvironmentFile=-/home/sammy/blog/backend/.env
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,460 @@
+basePath: /
+definitions:
+  models.BlogPost:
+    properties:
+      pAuthorName:
+        example: Sammy
+        type: string
+      pAuthorUuid:
+        example: G3QzWiV57VgYwAKbMTa07OaX3ra2
+        type: string
+      pBlurb:
+        example: A short summary of the post.
+        type: string
+      pContent:
+        example: |-
+          # Heading
+
+          Body text.
+        type: string
+      pDateTime:
+        example: "2026-05-24T08:25:00Z"
+        type: string
+      pId:
+        example: 3
+        type: integer
+      pTitle:
+        example: Writing a Gin backend
+        type: string
+    type: object
+  models.Comment:
+    properties:
+      commentId:
+        example: 12
+        type: integer
+      commentText:
+        example: Great write-up!
+        type: string
+      postId:
+        example: 3
+        type: integer
+      postTime:
+        example: "2026-05-24T08:25:00Z"
+        type: string
+      userId:
+        example: G3QzWiV57VgYwAKbMTa07OaX3ra2
+        type: string
+      userName:
+        example: Sammy
+        type: string
+    type: object
+  models.NewComment:
+    properties:
+      newCommentText:
+        example: Great write-up!
+        type: string
+      newPostId:
+        description: |-
+          NewPostID is deliberately not `binding:"required"`: post ids are
+          client-generated hashes with no foreign key, so 0 is a legal value and
+          "required" would reject it.
+        example: 3
+        type: integer
+      newUserId:
+        example: G3QzWiV57VgYwAKbMTa07OaX3ra2
+        type: string
+    required:
+    - newCommentText
+    - newUserId
+    type: object
+  models.NewPost:
+    properties:
+      newPostBlurb:
+        example: A short summary of the post.
+        type: string
+      newPostContent:
+        example: |-
+          # Heading
+
+          Body text.
+        type: string
+      newPostTitle:
+        example: Writing a Gin backend
+        type: string
+    required:
+    - newPostBlurb
+    - newPostContent
+    - newPostTitle
+    type: object
+  models.NewUser:
+    properties:
+      newUserName:
+        example: Sammy
+        type: string
+      newUserUuid:
+        example: G3QzWiV57VgYwAKbMTa07OaX3ra2
+        type: string
+    required:
+    - newUserName
+    - newUserUuid
+    type: object
+info:
+  contact: {}
+  description: Blog posts, comments and role management for the dev-crypt blog.
+  title: Dev Crypt Blog API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Echoes the caller's User-Agent inside a placeholder Comment. Used
+        as a liveness check.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Comment'
+      summary: Service greeting
+      tags:
+      - meta
+  /blogs.json:
+    get:
+      description: Serves the blogs.json file with an ETag; send If-None-Match to
+        receive 304 when unchanged.
+      parameters:
+      - description: ETag from a previous response
+        in: header
+        name: If-None-Match
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "304":
+          description: Not modified
+          schema:
+            type: string
+        "404":
+          description: blogs.json not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to read blogs.json
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Static blog index
+      tags:
+      - meta
+  /comments:
+    post:
+      consumes:
+      - application/json
+      description: Creates a comment on a blog post. The Firebase UID in the token
+        must match newUserId.
+      parameters:
+      - description: Comment to create
+        in: body
+        name: comment
+        required: true
+        schema:
+          $ref: '#/definitions/models.NewComment'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Comment'
+        "400":
+          description: Malformed request body
+          schema:
+            type: string
+        "401":
+          description: Missing, invalid, or mismatched token
+          schema:
+            type: string
+        "500":
+          description: Failed to insert comment
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Post a comment
+      tags:
+      - comments
+  /comments/{commentId}:
+    delete:
+      description: Deletes a comment. Requires the admin or moderator role.
+      parameters:
+      - description: Comment ID
+        in: path
+        name: commentId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Comment deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid comment id
+          schema:
+            type: string
+        "401":
+          description: Missing or invalid token
+          schema:
+            type: string
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: string
+        "404":
+          description: Comment not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a comment
+      tags:
+      - comments
+  /posts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.BlogPost'
+            type: array
+      summary: List blog posts
+      tags:
+      - posts
+    post:
+      consumes:
+      - application/json
+      description: Creates a post authored by the authenticated user. Requires the
+        admin or writer role.
+      parameters:
+      - description: Post to create
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/models.NewPost'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BlogPost'
+        "400":
+          description: Malformed request body
+          schema:
+            type: string
+        "401":
+          description: Missing or invalid token
+          schema:
+            type: string
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: string
+        "500":
+          description: Failed to insert post
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Publish a blog post
+      tags:
+      - posts
+  /posts/{postId}:
+    delete:
+      description: Deletes a post and its comments. Admins may delete any post, writers
+        only their own.
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Post deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid post id
+          schema:
+            type: string
+        "401":
+          description: Missing or invalid token
+          schema:
+            type: string
+        "403":
+          description: Not permitted to modify this post
+          schema:
+            type: string
+        "404":
+          description: Post not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a blog post
+      tags:
+      - posts
+    put:
+      consumes:
+      - application/json
+      description: Updates a post. Admins may edit any post, writers only their own.
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: integer
+      - description: Updated post
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/models.NewPost'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BlogPost'
+        "400":
+          description: Malformed request body or post id
+          schema:
+            type: string
+        "401":
+          description: Missing or invalid token
+          schema:
+            type: string
+        "403":
+          description: Not permitted to modify this post
+          schema:
+            type: string
+        "404":
+          description: Post not found
+          schema:
+            type: string
+        "500":
+          description: Failed to update post
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Edit a blog post
+      tags:
+      - posts
+  /posts/{postId}/comments:
+    get:
+      description: Returns comments for a post, oldest first, with optional pagination.
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: integer
+      - default: 0
+        description: Rows to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 10
+        description: Maximum rows
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Comment'
+            type: array
+        "400":
+          description: Invalid post id
+          schema:
+            type: string
+      summary: List a post's comments
+      tags:
+      - comments
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Stores the Firebase UID to display-name mapping. Existing users
+        are left untouched.
+      parameters:
+      - description: User to register
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.NewUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User created successfully
+          schema:
+            type: string
+        "400":
+          description: Malformed request body
+          schema:
+            type: string
+      summary: Register a display name
+      tags:
+      - users
+  /users/me/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "401":
+          description: Missing or invalid token
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List the authenticated user's roles
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: A Firebase ID token, formatted as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

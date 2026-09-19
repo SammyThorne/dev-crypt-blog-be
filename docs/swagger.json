@@ -1,0 +1,675 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Blog posts, comments and role management for the dev-crypt blog.",
+        "title": "Dev Crypt Blog API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Echoes the caller's User-Agent inside a placeholder Comment. Used as a liveness check.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "meta"
+                ],
+                "summary": "Service greeting",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Comment"
+                        }
+                    }
+                }
+            }
+        },
+        "/blogs.json": {
+            "get": {
+                "description": "Serves the blogs.json file with an ETag; send If-None-Match to receive 304 when unchanged.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "meta"
+                ],
+                "summary": "Static blog index",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ETag from a previous response",
+                        "name": "If-None-Match",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "304": {
+                        "description": "Not modified",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "blogs.json not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to read blogs.json",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/comments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a comment on a blog post. The Firebase UID in the token must match newUserId.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Post a comment",
+                "parameters": [
+                    {
+                        "description": "Comment to create",
+                        "name": "comment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NewComment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Comment"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or mismatched token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to insert comment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/comments/{commentId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a comment. Requires the admin or moderator role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Delete a comment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Comment ID",
+                        "name": "commentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Comment deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid comment id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Comment not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "List blog posts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.BlogPost"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a post authored by the authenticated user. Requires the admin or writer role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Publish a blog post",
+                "parameters": [
+                    {
+                        "description": "Post to create",
+                        "name": "post",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NewPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.BlogPost"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to insert post",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates a post. Admins may edit any post, writers only their own.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Edit a blog post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated post",
+                        "name": "post",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NewPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.BlogPost"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed request body or post id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Not permitted to modify this post",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update post",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a post and its comments. Admins may delete any post, writers only their own.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Delete a blog post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Not permitted to modify this post",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postId}/comments": {
+            "get": {
+                "description": "Returns comments for a post, oldest first, with optional pagination.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "List a post's comments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Rows to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Maximum rows",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Comment"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "post": {
+                "description": "Stores the Firebase UID to display-name mapping. Existing users are left untouched.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Register a display name",
+                "parameters": [
+                    {
+                        "description": "User to register",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.NewUser"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List the authenticated user's roles",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.BlogPost": {
+            "type": "object",
+            "properties": {
+                "pAuthorName": {
+                    "type": "string",
+                    "example": "Sammy"
+                },
+                "pAuthorUuid": {
+                    "type": "string",
+                    "example": "G3QzWiV57VgYwAKbMTa07OaX3ra2"
+                },
+                "pBlurb": {
+                    "type": "string",
+                    "example": "A short summary of the post."
+                },
+                "pContent": {
+                    "type": "string",
+                    "example": "# Heading\n\nBody text."
+                },
+                "pDateTime": {
+                    "type": "string",
+                    "example": "2026-05-24T08:25:00Z"
+                },
+                "pId": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "pTitle": {
+                    "type": "string",
+                    "example": "Writing a Gin backend"
+                }
+            }
+        },
+        "models.Comment": {
+            "type": "object",
+            "properties": {
+                "commentId": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "commentText": {
+                    "type": "string",
+                    "example": "Great write-up!"
+                },
+                "postId": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "postTime": {
+                    "type": "string",
+                    "example": "2026-05-24T08:25:00Z"
+                },
+                "userId": {
+                    "type": "string",
+                    "example": "G3QzWiV57VgYwAKbMTa07OaX3ra2"
+                },
+                "userName": {
+                    "type": "string",
+                    "example": "Sammy"
+                }
+            }
+        },
+        "models.NewComment": {
+            "type": "object",
+            "required": [
+                "newCommentText",
+                "newUserId"
+            ],
+            "properties": {
+                "newCommentText": {
+                    "type": "string",
+                    "example": "Great write-up!"
+                },
+                "newPostId": {
+                    "description": "NewPostID is deliberately not `binding:\"required\"`: post ids are\nclient-generated hashes with no foreign key, so 0 is a legal value and\n\"required\" would reject it.",
+                    "type": "integer",
+                    "example": 3
+                },
+                "newUserId": {
+                    "type": "string",
+                    "example": "G3QzWiV57VgYwAKbMTa07OaX3ra2"
+                }
+            }
+        },
+        "models.NewPost": {
+            "type": "object",
+            "required": [
+                "newPostBlurb",
+                "newPostContent",
+                "newPostTitle"
+            ],
+            "properties": {
+                "newPostBlurb": {
+                    "type": "string",
+                    "example": "A short summary of the post."
+                },
+                "newPostContent": {
+                    "type": "string",
+                    "example": "# Heading\n\nBody text."
+                },
+                "newPostTitle": {
+                    "type": "string",
+                    "example": "Writing a Gin backend"
+                }
+            }
+        },
+        "models.NewUser": {
+            "type": "object",
+            "required": [
+                "newUserName",
+                "newUserUuid"
+            ],
+            "properties": {
+                "newUserName": {
+                    "type": "string",
+                    "example": "Sammy"
+                },
+                "newUserUuid": {
+                    "type": "string",
+                    "example": "G3QzWiV57VgYwAKbMTa07OaX3ra2"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "A Firebase ID token, formatted as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
