@@ -1,0 +1,5 @@
+# Compiled binary
+/server
+
+# Local environment overrides
+.env
