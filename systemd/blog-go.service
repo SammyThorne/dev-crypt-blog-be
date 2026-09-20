@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=sammy
-Group=sammy
-WorkingDirectory=/home/sammy/blog/backend
-ExecStart=/home/sammy/blog/backend/server
-EnvironmentFile=-/home/sammy/blog/backend/.env
+User=root
+Group=root
+WorkingDirectory=/root/blog/backend
+ExecStart=/root/blog/backend/server
+EnvironmentFile=-/root/blog/backend/.env
 Restart=always
 RestartSec=5
 StandardOutput=journal
